@@ -1,36 +1,54 @@
 package model
 
 import (
+	"database/sql"
 	"golang_api/database"
-	"log"
 )
 
-// User representasi dari pengguna dalam sistem
 type User struct {
-	ID       int    `json:"ID"`
-	Name     string `json:"Name"`
-	Email    string `json:"Email"`
-	Password string `json:"Password"`
+	Id       int    `json:"id"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
-// CreateUser menyimpan data pengguna baru ke dalam database
-func CreateUser(user User) (User, error) {
-	// Query untuk memasukkan data pengguna baru
-	result, err := database.DB.Exec("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", user.Name, user.Email, user.Password)
+// CreateUser menyimpan user baru dan mengembalikan data lengkapnya
+func CreateUser(name, email, hashedPassword string) (User, error) {
+	var user User
+
+	query := "INSERT INTO users (name, email, password) VALUES (?, ?, ?)"
+	result, err := database.DB.Exec(query, name, email, hashedPassword)
 	if err != nil {
-		log.Println("Error menambahkan user:", err)
 		return user, err
 	}
 
-	// Mengambil ID pengguna yang baru saja dimasukkan
-	userID, err := result.LastInsertId()
+	id, err := result.LastInsertId()
 	if err != nil {
-		log.Println("Error mendapatkan ID pengguna:", err)
 		return user, err
 	}
 
-	// Menetapkan ID yang baru diperoleh ke objek user
-	user.ID = int(userID)
+	user = User{
+		Id:       int(id),
+		Name:     name,
+		Email:    email,
+		Password: hashedPassword,
+	}
 
 	return user, nil
+}
+
+// FindUserByEmail mencari user berdasarkan email
+func FindUserByEmail(email string) (User, error) {
+	var user User
+
+	query := "SELECT id, name, email, password FROM users WHERE email = ?"
+	err := database.DB.QueryRow(query, email).Scan(
+		&user.Id, &user.Name, &user.Email, &user.Password,
+	)
+
+	if err == sql.ErrNoRows {
+		return user, nil // atau return empty + error khusus kalau kamu ingin handle "tidak ditemukan"
+	}
+
+	return user, err
 }

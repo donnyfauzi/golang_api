@@ -29,7 +29,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	user.Password = hashedPassword
 
 	// Simpan user baru
-	user, err = model.CreateUser(user)
+	user, err = model.CreateUser(user.Name, user.Email, user.Password)
 	if err != nil {
 		log.Println("Error menyimpan data pengguna:", err)
 		http.Error(w, "Gagal registrasi", http.StatusInternalServerError)
