@@ -7,7 +7,11 @@ import (
 )
 
 // RegisterRoutes untuk menangani rute-rute autentikasi
-func RegisterRoutes(r *mux.Router) {
+func UserRoutes(r *mux.Router) {
+
 	// Rute untuk registrasi
 	r.HandleFunc("/register", controller.Register).Methods("POST")
+
+	// Rute untuk login
+	r.HandleFunc("/login", controller.Login).Methods("POST")
 }

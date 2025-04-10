@@ -8,7 +8,15 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
+
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+}
 
 func main() {
 	// Menghubungkan ke database
@@ -18,7 +26,7 @@ func main() {
 	r := mux.NewRouter()
 
 	// Daftarkan rute untuk autentikasi
-	routes.RegisterRoutes(r)
+	routes.UserRoutes(r)
 
 	// Menjalankan server
 	fmt.Println("Server berjalan di http://localhost:8080")

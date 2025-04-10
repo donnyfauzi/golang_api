@@ -41,7 +41,7 @@ func CreateUser(name, email, hashedPassword string) (User, error) {
 func FindUserByEmail(email string) (User, error) {
 	var user User
 
-	query := "SELECT id, name, email, password FROM users WHERE email = ?"
+	query := "SELECT * FROM users WHERE email = ?"
 	err := database.DB.QueryRow(query, email).Scan(
 		&user.Id, &user.Name, &user.Email, &user.Password,
 	)
