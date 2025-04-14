@@ -70,7 +70,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	// Cek password
 	if !middleware.CheckPasswordHash(creds.Password, user.Password) {
-		http.Error(w, "Password salah", http.StatusUnauthorized)
+		http.Error(w, "Password yang anda masukan salah", http.StatusUnauthorized)
 		return
 	}
 
