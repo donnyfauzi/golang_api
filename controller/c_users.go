@@ -36,12 +36,12 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	user, err = model.CreateUser(user.Name, user.Email, user.Password)
 	if err != nil {
 		log.Println("Error menyimpan data pengguna:", err)
-		http.Error(w, "Gagal registrasi", http.StatusInternalServerError)
+		http.Error(w, "Gagal registrasi pengguna", http.StatusInternalServerError)
 		return
 	}
 
 	// Menampilkan response sukses dengan data pengguna dalam format JSON
-	response := map[string]interface{}{
+	response := map[string]any{
 		"message": "Registrasi berhasil!",
 		"user":    user,
 	}
