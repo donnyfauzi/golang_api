@@ -5,7 +5,6 @@ import (
 	"golang_api/helper"
 	"golang_api/middleware"
 	"golang_api/model"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -19,21 +18,24 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	var user model.User
 	_ = json.NewDecoder(r.Body).Decode(&user)
 
-	// Hash password menggunakan bcrypt
-	hashedPassword, err := middleware.HashPassword(user.Password)
-	if err != nil {
-		http.Error(w, "Gagal memproses password", http.StatusInternalServerError)
+	if user.Name == "" || user.Email == "" || user.Password == "" {
+		helper.JSONError(w, http.StatusBadRequest, "Nama, email, dan password wajib diisi")
 		return
 	}
 
-	// Perbarui user dengan password yang telah di-hash
-	user.Password = hashedPassword
+	existingUser,err := model.FindUserByEmail(user.Email)
+	if err == nil && existingUser.Id != 0 {  // Jika email ditemukan
+		helper.JSONError(w, http.StatusBadRequest, "Email sudah terdaftar")
+		return
+	}
+
+	// Hash password menggunakan bcrypt
+	user.Password, _ = middleware.HashPassword(user.Password)
 
 	// Simpan user baru
 	user, err = model.CreateUser(user.Name, user.Email, user.Password)
 	if err != nil {
-		log.Println("Error menyimpan data pengguna:", err)
-		http.Error(w, "Gagal registrasi pengguna", http.StatusInternalServerError)
+		helper.JSONError(w, http.StatusInternalServerError, "Gagal registrasi pengguna")
 		return
 	}
 
@@ -50,22 +52,18 @@ func Register(w http.ResponseWriter, r *http.Request) {
 // Login menangani proses login dan generate JWT token
 func Login(w http.ResponseWriter, r *http.Request) {
 	var creds model.User
-	err := json.NewDecoder(r.Body).Decode(&creds)
-	if err != nil {
-		http.Error(w, "Format data tidak valid", http.StatusBadRequest)
-		return
-	}
+	_ = json.NewDecoder(r.Body).Decode(&creds)
 
 	// Cari user berdasarkan email
 	user, err := model.FindUserByEmail(creds.Email)
 	if err != nil {
-		http.Error(w, "Email tidak ditemukan", http.StatusUnauthorized)
+		helper.JSONError(w, http.StatusUnauthorized, "Email tidak ditemukan")
 		return
 	}
 
 	// Cek password
 	if !middleware.CheckPasswordHash(creds.Password, user.Password) {
-		http.Error(w, "Password yang anda masukan salah", http.StatusUnauthorized)
+		helper.JSONError(w, http.StatusUnauthorized, "Password salah")
 		return
 	}
 
@@ -80,13 +78,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// Ambil secret dari .env
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		http.Error(w, "JWT secret tidak tersedia", http.StatusInternalServerError)
+		helper.JSONError(w, http.StatusInternalServerError, "JWT secret tidak tersedia")
 		return
 	}
 
 	tokenString, err := token.SignedString([]byte(secret))
 	if err != nil {
-		http.Error(w, "Gagal membuat token", http.StatusInternalServerError)
+		helper.JSONError(w, http.StatusInternalServerError, "Gagal membuat token")
 		return
 	}
 
