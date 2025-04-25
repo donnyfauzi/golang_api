@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"golang_api/helper"
 	"golang_api/middleware"
 	"golang_api/model"
 	"log"
@@ -16,11 +17,7 @@ import (
 func Register(w http.ResponseWriter, r *http.Request) {
 	// Membaca body request sebagai JSON
 	var user model.User
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		http.Error(w, "Gagal membaca data request", http.StatusBadRequest)
-		return
-	}
+	_ = json.NewDecoder(r.Body).Decode(&user)
 
 	// Hash password menggunakan bcrypt
 	hashedPassword, err := middleware.HashPassword(user.Password)
@@ -47,9 +44,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set header content type dan kirim response dalam format JSON
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
+	helper.JSONResponse(w, http.StatusCreated, response)
 }
 
 // Login menangani proses login dan generate JWT token
@@ -96,11 +91,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Kirim token ke client
-	response := map[string]interface{}{
+	response := map[string]any{
 		"message": "Login berhasil",
 		"token":   tokenString,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	helper.JSONResponse(w, http.StatusOK, response)
 }
