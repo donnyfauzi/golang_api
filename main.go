@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"golang_api/database"
+	"golang_api/kafka"
 	"golang_api/routes"
 	"log"
 	"net/http"
@@ -22,11 +23,17 @@ func main() {
 	// Menghubungkan ke database
 	database.ConnectDB()
 
+	// Connect ke Kafka
+	kafka.InitKafka()
+	go kafka.StartConsumer()
+
 	// Menyiapkan router
 	r := mux.NewRouter()
 
 	// Daftarkan rute untuk autentikasi
 	routes.UserRoutes(r)
+	routes.ProductsRoutes(r)
+	routes.ChartRoutes(r)
 
 	// Menjalankan server
 	fmt.Println("Server berjalan di http://localhost:8080")

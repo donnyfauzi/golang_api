@@ -69,7 +69,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	// Buat JWT token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":    user.Id,
+		"user_id": user.Id,
 		"name":  user.Name,
 		"email": user.Email,
 		"exp":   time.Now().Add(time.Hour * 24).Unix(), // Token berlaku 24 jam

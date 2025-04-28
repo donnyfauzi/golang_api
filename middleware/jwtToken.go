@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -8,6 +9,11 @@ import (
 
 	"github.com/golang-jwt/jwt"
 )
+
+// Mendefinisikan tipe baru untuk kunci context
+type ContextKey string
+
+const UserIDKey ContextKey = "user_id" 
 
 func JwtVerify(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +42,24 @@ func JwtVerify(next http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "Token tidak valid", http.StatusForbidden)
 			return
 		}
+
+		// Ambil klaim dari token
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			http.Error(w, "Klaim token tidak valid", http.StatusForbidden)
+			return
+		}
+
+		// Ambil user_id dari klaim
+		userID, ok := claims["user_id"].(float64)
+		if !ok {
+			http.Error(w, "user_id tidak ditemukan dalam token", http.StatusForbidden)
+			return
+		}
+
+		// Tambahkan userID ke dalam context request
+		ctx := context.WithValue(r.Context(), UserIDKey, int(userID))
+		r = r.WithContext(ctx)
 
 		// Token valid, lanjutkan ke handler
 		next.ServeHTTP(w, r)
