@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"golang_api/database"
 	"log"
+	"time"
 )
 
 type ChartItem struct {
@@ -11,52 +12,49 @@ type ChartItem struct {
 	UserID    int    `json:"user_id"`
 	ProductID int    `json:"product_id"`
 	Quantity  int    `json:"quantity"`
-	CreatedAt int    `json:"created_at"`
-	UpdatedAt int    `json:"updated_at"`
+	CreatedAt string `json:"created_at"` // ubah jadi string
+	UpdatedAt string `json:"updated_at"` // ubah jadi string
 }
 
-func CreateChart(user_id, product_id, quantity, created_at, updated_at int) (ChartItem, error) {
+func CreateChart(user_id, product_id, quantity int) (ChartItem, error) {
 	var chart ChartItem
 
-	// Cek apakah sudah ada data untuk user_id dan product_id ini
+	now := time.Now().Format("2006-01-02 15:04:05") // format waktu standar
 	var existingQuantity int
 	var existingID int
-	err := database.DB.QueryRow("SELECT id, quantity FROM chart WHERE user_id = ? AND product_id = ?", user_id, product_id).Scan(&existingID, &existingQuantity)
+	var createdAt string
+
+	err := database.DB.QueryRow("SELECT id, quantity, created_at FROM chart WHERE user_id = ? AND product_id = ?", user_id, product_id).Scan(&existingID, &existingQuantity, &createdAt)
 
 	if err == nil {
-		// Data sudah ada, maka update quantity yang ada
+		// Data sudah ada -> Update quantity
 		newQuantity := existingQuantity + quantity
 
-		// Debug log untuk melihat jumlah quantity
-		log.Printf("Updating Quantity: user_id = %d, product_id = %d, old_quantity = %d, new_quantity = %d", user_id, product_id, existingQuantity, newQuantity)
+		log.Printf("Updating chart: user_id=%d, product_id=%d, old_quantity=%d, new_quantity=%d", user_id, product_id, existingQuantity, newQuantity)
 
 		_, err = database.DB.Exec(`
 			UPDATE chart 
 			SET quantity = ?, updated_at = ? 
 			WHERE id = ?
-		`, newQuantity, updated_at, existingID) // Gunakan existingID untuk update
+		`, newQuantity, now, existingID)
 
 		if err != nil {
 			return chart, err
 		}
 
-		// Log jika berhasil
-		log.Printf("Data berhasil diupdate: user_id = %d, product_id = %d, quantity = %d", user_id, product_id, newQuantity)
-
-		// Set data ChartItem dengan quantity baru
 		chart = ChartItem{
-			ID:        existingID,   // Gunakan existingID untuk update
+			ID:        existingID,
 			UserID:    user_id,
 			ProductID: product_id,
-			Quantity:  newQuantity,  // Update quantity dengan jumlah yang baru
-			CreatedAt: created_at,   // Bisa mengambil created_at lama jika perlu
-			UpdatedAt: updated_at,   // Waktu update
+			Quantity:  newQuantity,
+			CreatedAt: createdAt, // pakai createdAt lama
+			UpdatedAt: now,       // update updated_at
 		}
 
 	} else if err == sql.ErrNoRows {
-		// Jika tidak ada data, lakukan insert baru
+		// Data belum ada -> Insert baru
 		query := "INSERT INTO chart (user_id, product_id, quantity, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
-		result, err := database.DB.Exec(query, user_id, product_id, quantity, created_at, updated_at)
+		result, err := database.DB.Exec(query, user_id, product_id, quantity, now, now)
 		if err != nil {
 			return chart, err
 		}
@@ -66,26 +64,38 @@ func CreateChart(user_id, product_id, quantity, created_at, updated_at int) (Cha
 			return chart, err
 		}
 
-		// Log ID hasil insert
-		log.Printf("Data berhasil disimpan: ID = %d, user_id = %d, product_id = %d, quantity = %d", id, user_id, product_id, quantity)
-
 		chart = ChartItem{
-			ID:        int(id),        // ID hasil insert
+			ID:        int(id),
 			UserID:    user_id,
 			ProductID: product_id,
-			Quantity:  quantity,      // Set quantity yang diinput
-			CreatedAt: created_at,    // Timestamp waktu create
-			UpdatedAt: updated_at,    // Timestamp waktu update
+			Quantity:  quantity,
+			CreatedAt: now,
+			UpdatedAt: now,
 		}
+
 	} else {
-		// Error lainnya
+		// Error lain (bukan no rows)
 		return chart, err
 	}
 
 	return chart, nil
 }
 
+// CreateChartEvent menyimpan event chart ke tabel chart_event
+func CreateChartEvent(user_id, product_id, quantity int, action string) error {
+	now := time.Now().Format("2006-01-02 15:04:05") // format waktu standar
 
+	query := `
+		INSERT INTO chart_event (user_id, product_id, quantity, action, created_at)
+		VALUES (?, ?, ?, ?, ?)
+	`
+	_, err := database.DB.Exec(query, user_id, product_id, quantity, action, now)
+	if err != nil {
+		log.Printf("Gagal menyimpan chart_event: %v", err)
+		return err
+	}
 
-
+	log.Printf("Berhasil menyimpan chart_event untuk user_id=%d, product_id=%d, action=%s", user_id, product_id, action)
+	return nil
+}
 

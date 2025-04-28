@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
+
+	"golang_api/helper"
 
 	"github.com/golang-jwt/jwt"
 )
@@ -19,13 +20,13 @@ func JwtVerify(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenHeader := r.Header.Get("Authorization") // Format: Bearer {token}
 		if tokenHeader == "" {
-			http.Error(w, "Token tidak tersedia", http.StatusForbidden)
+			helper.JSONError(w, http.StatusUnauthorized, "Token tidak tersedia")
 			return
 		}
 
 		splitToken := strings.Split(tokenHeader, " ")
 		if len(splitToken) != 2 {
-			http.Error(w, "Format token salah", http.StatusForbidden)
+			helper.JSONError(w, http.StatusUnauthorized, "Format token salah")
 			return
 		}
 
@@ -33,27 +34,27 @@ func JwtVerify(next http.HandlerFunc) http.HandlerFunc {
 		secret := os.Getenv("JWT_SECRET")
 		token, err := jwt.Parse(tokenPart, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("method token tidak valid")
+				helper.JSONError(w, http.StatusUnauthorized, "Method token tidak valid")
 			}
 			return []byte(secret), nil
 		})
 
 		if err != nil || !token.Valid {
-			http.Error(w, "Token tidak valid", http.StatusForbidden)
+			helper.JSONError(w, http.StatusUnauthorized, "Token tidak valid")
 			return
 		}
 
 		// Ambil klaim dari token
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			http.Error(w, "Klaim token tidak valid", http.StatusForbidden)
+			helper.JSONError(w, http.StatusUnauthorized, "Klaim token tidak valid")
 			return
 		}
 
 		// Ambil user_id dari klaim
 		userID, ok := claims["user_id"].(float64)
 		if !ok {
-			http.Error(w, "user_id tidak ditemukan dalam token", http.StatusForbidden)
+			helper.JSONError(w, http.StatusUnauthorized, "User_id tidak ditemukan dalam token")
 			return
 		}
 

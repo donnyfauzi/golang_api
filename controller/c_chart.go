@@ -27,13 +27,6 @@ func AddToChart(w http.ResponseWriter, r *http.Request) {
 
 	req.UserID = userID
 
-	// Simpan chart ke database
-	chart, err := model.CreateChart(req.UserID, req.ProductID, req.Quantity, req.CreatedAt, req.UpdatedAt)
-	if err != nil {
-		helper.JSONError(w, http.StatusInternalServerError, "Gagal menyimpan chart ke database")
-		return
-	}
-
 	message, _ := json.Marshal(req)
 
 	err = kafka.ProduceMessage(message)
@@ -43,8 +36,7 @@ func AddToChart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]any{
-		"message": "Produk berhasil ditambahkan ke chart",
-		"chart":   chart,
+		"message": "Produk berhasil ditambahkan ke chart & chart_event",
 	}
 
 	helper.JSONResponse(w, http.StatusOK, response)

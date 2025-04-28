@@ -5,20 +5,18 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"time"
 
-	"golang_api/model" // Update dengan path yang sesuai untuk model kamu
+	"golang_api/model"
 
 	"github.com/segmentio/kafka-go"
 )
 
 // StartConsumer akan memulai Kafka consumer dan menangani pesan yang diterima
 func StartConsumer() {
-	// Inisialisasi Kafka Consumer
 	consumer := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{os.Getenv("KAFKA_BROKER")}, // Kafka Broker
-		Topic:   "add-to-chart",                      // Nama Topic yang akan di-consume
-		GroupID: "chart-consumer-group",               // Group ID untuk consumer
+		Brokers: []string{os.Getenv("KAFKA_BROKER")},
+		Topic:   "add-to-chart",
+		GroupID: "chart-consumer-group",
 		MinBytes: 10e3,  // 10KB
 		MaxBytes: 10e6,  // 10MB
 	})
@@ -27,20 +25,15 @@ func StartConsumer() {
 
 	log.Println("Kafka Consumer started. Waiting for messages...")
 
-	// Loop untuk membaca pesan dari Kafka
 	for {
-		// Membaca pesan dari Kafka
 		message, err := consumer.FetchMessage(context.Background())
 		if err != nil {
 			log.Println("Error membaca pesan dari Kafka:", err)
 			continue
 		}
 
-		// Menampilkan informasi tentang pesan yang diterima
 		log.Printf("Pesan diterima: %s\n", string(message.Value))
-		
 
-		// Decode pesan JSON ke dalam struct ChartItem
 		var chartRequest model.ChartItem
 		err = json.Unmarshal(message.Value, &chartRequest)
 		if err != nil {
@@ -48,26 +41,32 @@ func StartConsumer() {
 			continue
 		}
 
-		// Menambahkan timestamp untuk created_at dan updated_at
-		createdAt := time.Now().Unix()
-		updatedAt := createdAt
-
-		// Simpan data ke database
-		_, err = model.CreateChart(chartRequest.UserID, chartRequest.ProductID, chartRequest.Quantity, int(createdAt), int(updatedAt))
+		// Simpan data chart ke database
+		chart, err := model.CreateChart(chartRequest.UserID, chartRequest.ProductID, chartRequest.Quantity)
 		if err != nil {
 			log.Println("Error menyimpan ke database:", err)
 		} else {
-			log.Printf("Data berhasil disimpan ke database: %+v\n", chartRequest)
+			log.Printf("Data berhasil disimpan ke database: %+v\n", chart)
+			
+			// Catat ke tabel chart_event setelah berhasil simpan ke chart
+			action := "insert"
+			if chartRequest.Quantity > 1 {
+				action = "update"
+			}
+
+			err = model.CreateChartEvent(chartRequest.UserID, chartRequest.ProductID, chartRequest.Quantity, action)
+			if err != nil {
+				log.Println("Error menyimpan event ke chart_event:", err)
+			} else {
+				log.Printf("Event berhasil dicatat: user_id=%d, product_id=%d, action=%s", chartRequest.UserID, chartRequest.ProductID, action)
+			}
 		}
 
-		log.Printf("Menerima data untuk user_id: %d, product_id: %d, quantity: %d", chartRequest.UserID, chartRequest.ProductID, chartRequest.Quantity)
-
-
-		// Kalau sukses baru commit
 		if err := consumer.CommitMessages(context.Background(), message); err != nil {
 			log.Println("Error commit message:", err)
 		} else {
-			log.Printf("Data berhasil disimpan: %+v", chartRequest)
+			log.Printf("Pesan berhasil di-commit")
 		}
 	}
 }
+

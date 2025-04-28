@@ -13,7 +13,7 @@ var KafkaWriter *kafka.Writer
 
 func InitKafka() {
 	KafkaWriter = kafka.NewWriter(kafka.WriterConfig{
-		Brokers:  []string{os.Getenv("KAFKA_BROKER")}, // contoh: "localhost:9092"
+		Brokers:  []string{os.Getenv("KAFKA_BROKER")}, //"localhost:9092"
 		Topic:    "add-to-chart",
 		Balancer: &kafka.LeastBytes{},
 	})
@@ -22,7 +22,7 @@ func InitKafka() {
 func ProduceMessage(message []byte) error {
 	err := KafkaWriter.WriteMessages(context.Background(),
 		kafka.Message{
-			Key:   []byte(time.Now().String()), // opsional, bisa pakai id transaksi
+			Key:   []byte(time.Now().String()), 
 			Value: message,
 		},
 	)
