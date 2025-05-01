@@ -100,7 +100,6 @@ func DeleteChartQuantity(userID, productID, quantityToDelete int) error {
 	}
 
 	if quantityToDelete >= currentQty {
-		// Hapus total
 		return DeleteChart(userID, productID)
 	}
 
@@ -116,12 +115,8 @@ func DeleteChartQuantity(userID, productID, quantityToDelete int) error {
 	return CreateChartEvent(userID, productID, quantityToDelete, "deleted")
 }
 
-
-
-// CreateChartEvent menyimpan event chart ke tabel chart_event
 func CreateChartEvent(user_id, product_id, quantity int, action string) error {
 
-	// Validasi jenis action
 	validActions := map[string]bool{
 		"added":       true,
 		"deleted":     true,
